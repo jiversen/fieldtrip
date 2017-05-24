@@ -14,7 +14,7 @@ function sync {
   for file in $*; do
     if [ -n "$latest" ]; then
       if [ "$file" != "$latest" ] ; then
-        cp "$latest" "$file"
+cp -p $latest $file # JRI 20170523 (jiversen@ucsd.edu) add -p to copy to preserve dates
       fi
     fi
   done
