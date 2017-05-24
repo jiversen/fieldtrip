@@ -608,9 +608,10 @@ nchan = length(chanindx);
 nsmp  = cellfun('size', datacells, 2);
 nrpt  = numel(trials);
 sumsmp = cumsum([0 nsmp]);
+precision = class(datacells{1});
 
 %---initialize
-datamatrix = nan(nchan, sum(nsmp) + nnans*(nrpt-1));
+datamatrix = nan(nchan, sum(nsmp) + nnans*(nrpt-1), precision);
 
 %---fill the matrix
 for k = 1:nrpt
