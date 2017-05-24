@@ -161,6 +161,16 @@ function [comp] = ft_componentanalysis(cfg, data)
 %     no concatenation across trials is needed. This is based on experimental
 %     code and only supported for 'dss', 'fastica' and 'bsscca' as methods.
 
+% === JRI Customizations ===
+% *** JRI *** 10/2009 various changes: new method: hfastica; remove redundant data
+% (option cfg.nsiflatten='yes' omits any redundant datapoints introduced by concatenating
+% overlapping trials)
+%
+% *** JRI *** 11/2009 parallel implementation: pbinica
+% must specify cfg.id (a unique id for this computation)
+% *** JRI *** 1/2012 add pamica, need cfg.id, and nsiflatten='yes'
+% *** JRI *** 3/2013 add qamica, to run amica on SCCN cluster
+
 % these are used by the ft_preamble/ft_postamble function and scripts
 ft_revision = '$Id$';
 ft_nargin   = nargin;
@@ -202,6 +212,7 @@ cfg.cellmode        = ft_getopt(cfg, 'cellmode',     'no');
 cfg.doscale         = ft_getopt(cfg, 'doscale',      'yes');
 cfg.updatesens      = ft_getopt(cfg, 'updatesens',   'yes');
 cfg.feedback        = ft_getopt(cfg, 'feedback',     'text');
+cfg.nsiflatten      = ft_getopt(cfg, 'nsiflatten',   'no'); % *** JRI *** to handle deduplicating of overlapping trials
 
 % select channels, has to be done prior to handling of previous (un)mixing matrix
 cfg.channel = ft_channelselection(cfg.channel, data.label);
@@ -258,6 +269,7 @@ switch cfg.method
     % additional options, see BINICA for details
     cfg.binica       = ft_getopt(cfg,        'binica',  []);
     cfg.binica.lrate = ft_getopt(cfg.binica, 'lrate',   0.001);
+    cfg.binica.extended = ft_getopt(cfg.binica, 'extended', 1); %*** JRI *** as recommended
   case 'dss'
     % additional options, see DSS for details
     cfg.dss               = ft_getopt(cfg,          'dss',      []);
@@ -408,16 +420,35 @@ elseif ~strcmp(cfg.method, 'predetermined unmixing matrix') && strcmp(cfg.cellmo
   % concatenate all the data into a 2D matrix unless we already have an
   % unmixing matrix or unless the user request it otherwise
   ft_info('concatenating data');
-  
-  dat = zeros(Nchans, sum(Nsamples));
-  ft_progress('init', cfg.feedback, 'concatenating trials...');
-  for trial=1:Ntrials
-    ft_progress(trial/Ntrials, 'Concatenating trial %d from %d', trial, Ntrials);
-    begsample = sum(Nsamples(1:(trial-1))) + 1;
-    endsample = sum(Nsamples(1:trial));
-    dat(:,begsample:endsample) = data.trial{trial};
+  if strcmp(cfg.nsiflatten, 'no')
+    dat = zeros(Nchans, sum(Nsamples));
+    ft_progress('init', cfg.feedback, 'concatenating trials...');
+    for trial=1:Ntrials
+      ft_progress(trial/Ntrials, 'Concatenating trial %d from %d', trial, Ntrials);
+      begsample = sum(Nsamples(1:(trial-1))) + 1;
+      endsample = sum(Nsamples(1:trial));
+      dat(:,begsample:endsample) = data.trial{trial};
+    end
+    ft_progress('close')
+  else
+    % *** JRI ***
+    if isfield(cfg,'id')
+      fin = parallelFinished(cfg.id);
+      needFlatten = (isempty(fin) || ~fin);
+    else
+      needFlatten = true;
+    end
+    if needFlatten
+      ft_info('concatenating and flattening data (removing redundant points)\n');
+      tmpcfg=[];
+      tmpcfg.flatten = true;
+      dat = trialsToMat(tmpcfg,data);
+    else
+      ft_info('finished, not passing data')
+      dat = [];
+    end
   end
-  ft_progress('close')
+ 
   ft_info('concatenated data matrix size %dx%d\n', size(dat,1), size(dat,2));
   
   hasdatanans = any(~isfinite(dat(:)));
@@ -843,6 +874,121 @@ switch cfg.method
   case 'parafac'
     ft_error('parafac is not supported anymore in ft_componentanalysis');
     
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+  %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %% JRI Methods
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+  case 'hfastica' % a very fast, mpi parallelized fastica
+    %temp
+    %load icadat_DT2_b1_results.mat
+    [weights, sphere] = hFastICA(dat);
+    
+    % scale the sphering matrix to unit norm
+    if strcmp(cfg.normalisesphere, 'yes')
+      sphere = sphere./norm(sphere);
+    end
+    
+    unmixing = weights*sphere;
+    mixing = [];
+    
+  case 'pbinica' % a dispatched parallel version of binica  (obsolete--NSI)
+    %note, this is unique, in that it can return immediately, with no
+    %results. In this case, return an empty comp result. We must call
+    %component analysis again later to retrieve the results and finish
+    %processing
+    
+    % construct key-value pairs for the optional arguments
+    % use args in cfg.binica
+    optarg = ft_cfg2keyval(cfg.binica);
+    if ~isfield(cfg,'id')
+      error('pbinica must specify a unique id in cfg.id')
+    end
+    pbincfg.id = cfg.id;
+    [weights, sphere, bias, signs] = pbinica(dat, 'cfg', pbincfg, optarg{:});
+    
+    %in case computation is not yet finished, return empty result
+    if isempty(weights)
+      comp = [];
+      return
+    end
+    
+    % scale the sphering matrix to unit norm
+    if strcmp(cfg.normalisesphere, 'yes')
+      sphere = sphere./norm(sphere);
+    end
+    
+    unmixing = weights*sphere;
+    mixing = [];
+    
+  case 'pamica' % a dispatched parallel version of AMICA (obsolete--NSI)
+    %note, this can return immediately, with no
+    %results. In this case, returns an empty comp result. We must call the same
+    %component analysis again later to retrieve the results and finish
+    %processing
+    % construct key-value pairs for the optional arguments
+    % pass any args in cfg.amica
+    if isfield(cfg,'amica')
+      optarg = ft_cfg2keyval(cfg.amica);
+    else
+      optarg = {};
+    end
+    if ~isfield(cfg,'id')
+      error('pamica must specify a unique id in cfg.id')
+    end
+    pamicacfg.id = cfg.id;
+    [weights, sphere, mods] = pamica(dat, 'cfg', pamicacfg, optarg{:});
+    
+    %in case computation is not yet finished, return empty result
+    if isempty(weights)
+      comp = [];
+      return
+    end
+    
+    % scale the sphering matrix to unit norm
+    %     if strcmp(cfg.normalisesphere, 'yes'),
+    %       sphere = sphere./norm(sphere);
+    %     end
+    
+    unmixing = weights*sphere;
+    mixing = [];
+    
+  %% Run AMICA on SCCN cluster
+  case 'qamica' % a dispatched parallel version of AMICA
+    %note, this can return immediately, with no
+    %results. In this case, returns an empty comp result. We must call the same
+    %component analysis again later to retrieve the results and finish
+    %processing
+    % construct key-value pairs for the optional arguments
+    % pass any args in cfg.amica
+    if isfield(cfg,'amica')
+      optarg = ft_cfg2keyval(cfg.amica);
+    else
+      optarg = {};
+    end
+    if ~isfield(cfg,'id')
+      error('pamica must specify a unique id in cfg.id')
+    end
+    pamicacfg.id = cfg.id;
+    [weights, sphere, mods] = qamica(dat, 'cfg', pamicacfg, optarg{:});
+    
+    %in case computation is not yet finished, return empty result
+    if isempty(weights)
+      comp = [];
+      return
+    end
+    
+    % scale the sphering matrix to unit norm
+    %     if strcmp(cfg.normalisesphere, 'yes'),
+    %       sphere = sphere./norm(sphere);
+    %     end
+    
+    unmixing = weights*sphere;
+    mixing = [];
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
   otherwise
     ft_error('unknown method for component analysis');
 end % switch method
@@ -882,6 +1028,17 @@ if size(mixing,2) > cfg.numcomponent
   mixing(:,cfg.numcomponent+1:end) = [];
 end
 
+%*** JRI ***: save weights & sphering matrix
+comp.weights = weights;
+comp.sphere = sphere;
+if strcmp(cfg.method,'pbinica')
+  comp.bias = bias;
+  comp.signs = signs;
+end
+if strcmp(cfg.method, 'pamica') || strcmp(cfg.method, 'qamica')
+  comp.mods = mods;
+end
+
 % compute the activations in each trial
 if strcmp(cfg.doscale, 'yes')
   for trial=1:Ntrials
@@ -896,6 +1053,21 @@ end
 % store mixing/unmixing matrices in structure
 comp.topo = mixing;
 comp.unmixing = unmixing;
+
+% *** JRI ***: for hfastica, sort components in decreasing order of explained variance (cf. runica.m)
+if strcmp(cfg.method,'hfastica')
+  disp('sorting components in decreasing explained variance')
+  act = epoch_concat(trialsToMat([],comp));
+  meanvar = sum(comp.topo.^2).*sum((act').^2)/(size(comp.weights,1)-1)^2;
+  [~, idx] = sort(-meanvar);
+  comp.meanvar = meanvar(idx);
+  comp.weights = comp.weights(idx,:);
+  comp.topo = comp.topo(:,idx);
+  comp.originalIdx(idx) = 1:length(idx);
+  for trial = 1:Ntrials
+    comp.trial{trial} = comp.trial{trial}(idx,:);
+  end
+end
 
 % get the labels
 if strcmp(cfg.method, 'predetermined unmixing matrix')
@@ -965,6 +1137,14 @@ end
 % copy the trialinfo into the output
 if isfield(data, 'trialinfo')
   comp.trialinfo = data.trialinfo;
+end
+
+% *** JRI ***: copy trial definitions from data
+if isfield(data, 'nsi_trialinfo')
+  comp.nsi_trialinfo = data.nsi_trialinfo;
+else
+  dbstop if error
+  error('should have nsi_trialinfo')
 end
 
 % convert back to input type if necessary
