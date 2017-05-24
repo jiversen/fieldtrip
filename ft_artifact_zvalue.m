@@ -352,9 +352,10 @@ if pertrial
 else
   indvec = ones(1,numtrl);
 end
+zchanmax = cell(1, numtrl); % *** JRI *** keep track of max, across time, for all channels
 for trlop = 1:numtrl
   if strcmp(cfg.memory, 'low') % store nothing in memory (note that we need to preproc AGAIN... *yawn*
-    fprintf('.');
+    if ~(mod(trlop,100)), fprintf('.'); end % *** JRI *** display progress less often
     if hasdata
       dat = ft_fetch_data(data,        'header', hdr, 'begsample', trl(trlop,1)-fltpadding, 'endsample', trl(trlop,2)+fltpadding, 'chanindx', sgnind, 'checkboundary', strcmp(cfg.continuous, 'no'));
     else
@@ -382,6 +383,11 @@ for trlop = 1:numtrl
     [zmax{trlop},ind] = max(zdata,[],1);            % find the maximum z-value and remember it
     zindx{trlop}      = sgnind(ind);                % also remember the channel number that has the largest z-value
   end
+  
+  % *** JRI *** also remember the max, across time, for all channels
+  % useful if we want to omit w/ channel granularity, rather than trial
+  zchanmax{trlop} = max(zdata,[],2);
+
   % This alternative code does the same, but it is much slower
   %   for i=1:size(zmax{trlop},2)
   %       if zdata{trlop}(i)>zmax{trlop}(i)
@@ -600,6 +606,13 @@ cfg.artfctdef.zvalue.artifact = artifact;
 
 % also update the threshold
 cfg.artfctdef.zvalue.cutoff   = opt.threshold;
+
+% *** JRI *** remember the zvalues, so we can re-threshold later if we want
+cfg.artfctdef.zvalue.zinfo.zsum = zsum;
+cfg.artfctdef.zvalue.zinfo.zmax = zmax;
+cfg.artfctdef.zvalue.zinfo.zindx = zindx;
+cfg.artfctdef.zvalue.zinfo.zchanmax = zchanmax;
+% *** JRI ***
 
 fprintf('detected %d artifacts\n', size(artifact,1));
 
