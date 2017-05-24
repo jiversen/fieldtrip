@@ -181,7 +181,7 @@ for chan=1:Nchan
   end
   
   if r > maxradius
-    fprintf('channel = %s, not enough surface points, using all points\n', grad.label{chan});
+    fprintf('channel = %s, exceeded maximum radius, using all points\n', grad.label{chan});
     o = single_o;
     r = single_r;
   end
