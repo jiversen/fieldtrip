@@ -88,6 +88,8 @@ powindx     = ft_getopt(varargin, 'powindx');
 pownorm     = ft_getopt(varargin, 'pownorm', 0);
 pchanindx   = ft_getopt(varargin, 'pchanindx');
 
+precision = class(input); % *** JRI *** preserve precision
+
 if isempty(dimord)
   ft_error('input parameters should contain a dimord');
 end
@@ -104,7 +106,7 @@ if ~isempty(pchanindx) && isempty(powindx)
   newsiz = siz;
   newsiz(2:3) = numel(chan); % size of partialised csd
   
-  A = zeros(newsiz);
+  A  = zeros(newsiz, precision);
   
   for j = 1:siz(1) % loop over rpt
     AA = reshape(inputdata(j, chan,  chan, : ),         [nchan  nchan      prod(siz(4:end))]); % fold freq_time into one dimension
@@ -117,7 +119,7 @@ if ~isempty(pchanindx) && isempty(powindx)
   end
   inputdata = A;
   siz = [size(inputdata) 1];
-  
+  clear A AA AB BB BA % *** JRI ***
 elseif ~isempty(pchanindx)
   % linearly indexed crossspectra require some more complicated handling
   if numel(pchanindx)>1
@@ -160,9 +162,13 @@ end
 if (length(strfind(dimord, 'chan'))~=2 || contains(dimord, 'pos')) && ~isempty(powindx)
   % crossterms are not described with chan_chan_therest, but are linearly indexed
   
-  outsum = zeros(siz(2:end));
-  outssq = zeros(siz(2:end));
-  outcnt = zeros(siz(2:end));
+  n  = siz(1); % *** JRI *** don't compute ssq if unneeded
+  outsum = zeros(siz(2:end), precision);
+  if n>1,
+      outssq = zeros(siz(2:end), precision);
+  end
+  %outcnt = zeros(siz(2:end), precision);
+  outcnt = 0; % *** JRI *** optimize
   ft_progress('init', feedback, 'computing metric...');
   for j = 1:siz(1)
     ft_progress(j/siz(1), 'computing metric for replicate %d from %d\n', j, siz(1));
@@ -175,22 +181,30 @@ if (length(strfind(dimord, 'chan'))~=2 || contains(dimord, 'pos')) && ~isempty(p
     end
     tmp    = complexeval(reshape(inputdata(j,:,:,:,:), siz(2:end))./denom, cmplx);
     outsum = outsum + tmp;
-    outssq = outssq + tmp.^2;
-    outcnt = outcnt + double(~isnan(tmp));
+    if n>1, % *** JRI *** optimize
+        %outssq = outssq + tmp.^2;
+        outssq = outssq + tmp.*conj(tmp);
+    end
+    %outcnt = outcnt + double(~isnan(tmp));
+    outcnt = outcnt + 1;
   end
   ft_progress('close');
   
 elseif length(strfind(dimord, 'chan'))==2 || length(strfind(dimord, 'pos'))==2
   % crossterms are described by chan_chan_therest
-  outsum = zeros(siz(2:end));
-  outssq = zeros(siz(2:end));
-  outcnt = zeros(siz(2:end));
+  n  = siz(1); % *** JRI *** don't compute if only one repeat
+  if n>1,
+      outsum = zeros(siz(2:end), precision);
+      outssq = zeros(siz(2:end), precision);
+  end
+  %outcnt = zeros(siz(2:end), precision);
+  outcnt = 0; % *** JRI *** optimize
   ft_progress('init', feedback, 'computing metric...');
   for j = 1:siz(1)
     ft_progress(j/siz(1), 'computing metric for replicate %d from %d\n', j, siz(1));
     if pownorm
-      p1  = zeros([siz(2) 1 siz(4:end)]);
-      p2  = zeros([1 siz(3) siz(4:end)]);
+      p1  = zeros([siz(2) 1 siz(4:end)], precision);
+      p2  = zeros([1 siz(3) siz(4:end)], precision);
       for k = 1:siz(2)
         p1(k,1,:,:,:,:) = inputdata(j,k,k,:,:,:,:);
         p2(1,k,:,:,:,:) = inputdata(j,k,k,:,:,:,:);
@@ -203,9 +217,15 @@ elseif length(strfind(dimord, 'chan'))==2 || length(strfind(dimord, 'pos'))==2
     end
     tmp    = complexeval(reshape(inputdata(j,:,:,:,:,:,:), siz(2:end))./denom, cmplx); % added this for nan support marvin
     %tmp(isnan(tmp)) = 0; % added for nan support
-    outsum = outsum + tmp;
-    outssq = outssq + tmp.^2;
-    outcnt = outcnt + double(~isnan(tmp));
+    if n==1,
+        outsum = tmp;
+    elseif n>1,
+        outsum = outsum + tmp;
+        %outssq = outssq + tmp.^2;
+        outssq = outssq + tmp.*conj(tmp);
+    end
+    %outcnt = outcnt + double(~isnan(tmp));
+    outcnt = outcnt + 1;
   end
   ft_progress('close');
   
