@@ -1097,6 +1097,11 @@ if isfield(data, 'trialinfo') && strcmp(cfg.keeptrials, 'yes')
   freq.trialinfo = data.trialinfo;
 end
 
+% *** JRI ***
+if isfield(data, 'nsi_trialinfo') && strcmp(cfg.keeptrials, 'yes')
+  freq.nsi_trialinfo = data.nsi_trialinfo;
+end
+
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
 ft_postamble previous   data
