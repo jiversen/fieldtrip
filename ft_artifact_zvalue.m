@@ -364,11 +364,10 @@ if pertrial
 else
   indvec = ones(1,numtrl);
 end
+zchanmax = cell(1, numtrl); % *** JRI *** keep track of max, across time, for all channels
 
 ft_progress('init', cfg.feedback, ['processing data in ' num2str(nchan) ' channels']);
 for trlop = 1:numtrl
-  
-  if strcmp(cfg.memory, 'low') % store nothing in memory (note that we need to fetch/read and preproc AGAIN... *yawn*)
     ft_progress(trlop/numtrl, 'processing trial %d from %d\n', trlop, numtrl);
     options_getdata = {'header', hdr, 'begsample', trl(trlop,1)-fltpadding, 'endsample', trl(trlop,2)+fltpadding, 'chanindx', chanindx, 'checkboundary', strcmp(cfg.continuous, 'no')};
     if hasdata
@@ -381,19 +380,10 @@ for trlop = 1:numtrl
   else
     thisdat = dat{trlop};
   end
-
-  nsmp    = size(thisdat,2);
-
-  zmax{trlop}  = -inf + zeros(1, nsmp);
-  zsum{trlop}  =        zeros(1, nsmp);
-  zindx{trlop} =        zeros(1, nsmp);
-        
-  ix           = indvec(trlop) * ones(1,nsmp);           % indexing vector dependent on the pertrial setting 
-  zdata        = (thisdat - datavg(:,ix))./datstd(:,ix); % convert the filtered data to z-values
-  zsum{trlop}  = nansum(zdata,1);      % sum the z-values across channels
-  [zmax{trlop},ind] = max(zdata,[],1); % find the maximum z-value and remember it
-  zindx{trlop}      = chanindx(ind);   % also remember the channel number that has the largest z-value
-
+  % *** JRI *** also remember the max, across time, for all channels
+  % useful if we want to omit w/ channel granularity, rather than trial
+  zchanmax{trlop} = max(zdata,[],2);
+  
 end % for trlop
 ft_progress('close');
 
@@ -588,6 +578,16 @@ end
 cfg.artfctdef.zvalue.trl      = trl;              % remember where we have been looking for artifacts
 cfg.artfctdef.zvalue.cutoff   = opt.threshold;    % remember the threshold that was used
 cfg.artfctdef.zvalue.artifact = artifact;
+
+% also update the threshold
+cfg.artfctdef.zvalue.cutoff   = opt.threshold;
+
+% *** JRI *** remember the zvalues, so we can re-threshold later if we want
+cfg.artfctdef.zvalue.zinfo.zsum = zsum;
+cfg.artfctdef.zvalue.zinfo.zmax = zmax;
+cfg.artfctdef.zvalue.zinfo.zindx = zindx;
+cfg.artfctdef.zvalue.zinfo.zchanmax = zchanmax;
+% *** JRI ***
 
 ft_notice('detected %d artifacts\n', size(artifact,1));
 
