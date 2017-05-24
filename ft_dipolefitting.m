@@ -87,6 +87,11 @@ function [source] = ft_dipolefitting(cfg, data)
 % input/output structure.
 %
 % See also FT_SOURCEANALYSIS, FT_PREPARE_LEADFIELD, FT_PREPARE_HEADMODEL
+%
+% *** JRI *** (jiversen@ucsd.edu) added fixed dipole constraint
+% cfg.fixdip.pos (n x 3 matrix of fixed dipoles)
+% cfg.fixdip.mom (3 x n matrix of moments)
+%
 
 % TODO change the output format, more suitable would be something like:
 % dip.label
@@ -166,6 +171,7 @@ cfg.normalizeparam  = ft_getopt(cfg, 'normalizeparam'); % this is better not use
 cfg.backproject     = ft_getopt(cfg, 'backproject');    % this is better not used in dipole fitting
 cfg.reducerank      = ft_getopt(cfg, 'reducerank', []); % the default for this is handled below
 cfg.dipfit          = ft_getopt(cfg, 'dipfit', []);     % the default for this is handled below
+cfg.fixdip          = ft_getopt(cfg, 'fixdip', []);     % *** JRI ***
 
 cfg = ft_checkconfig(cfg, 'renamed', {'tightgrid', 'tight'}); % this is moved to cfg.sourcemodel.tight by the subsequent createsubcfg
 cfg = ft_checkconfig(cfg, 'renamed', {'sourceunits', 'unit'}); % this is moved to cfg.sourcemodel.unit by the subsequent createsubcfg
@@ -228,6 +234,17 @@ if ft_getopt(cfg.dipfit.constr, 'sequential', false) && strcmp(cfg.model, 'movin
   ft_error('the moving dipole model does not combine with the sequential constraint')
   % see http://bugzilla.fieldtriptoolbox.org/show_bug.cgi?id=3119
 end
+
+% *** JRI *** fixed dipole constraint
+if ~isempty(cfg.fixdip)
+  cfg.fixdip = fixdipole(cfg.fixdip);
+  if ~isfield(cfg.fixdip,'mom')
+    nFixdip = size(cfg.fixdip.pos,1);
+    cfg.fixdip.mom = zeros(3*nFixdip, 1);
+  end
+  cfg.dipfit.constr.fixdip = cfg.fixdip;
+end
+% *** JRI ***
 
 if isfield(data, 'topolabel')
   % this looks like a component analysis
@@ -427,7 +444,7 @@ if strcmp(cfg.gridsearch, 'yes')
       if cfg.numdipoles==1
         fprintf('found minimum after scanning on grid point [%g %g %g]\n', dip.pos(1), dip.pos(2), dip.pos(3));
       elseif cfg.numdipoles==2
-        fprintf('found minimum after scanning on grid point [%g %g %g; %g %g %g]\n', dip.pos(1), dip.pos(2), dip.pos(3), dip.pos(4), dip.pos(5), dip.pos(6));
+        fprintf('found minimum after scanning on grid point [%g %g %g; %g %g %g]\n', dip.pos(1,1), dip.pos(1,2), dip.pos(1,3), dip.pos(2,1), dip.pos(2,2), dip.pos(2,3));
       end
 
     case 'moving'
@@ -440,7 +457,7 @@ if strcmp(cfg.gridsearch, 'yes')
         if cfg.numdipoles==1
           fprintf('found minimum after scanning for topography %d on grid point [%g %g %g]\n', t, dip(t).pos(1), dip(t).pos(2), dip(t).pos(3));
         elseif cfg.numdipoles==2
-          fprintf('found minimum after scanning for topography %d on grid point [%g %g %g; %g %g %g]\n', t, dip(t).pos(1), dip(t).pos(2), dip(t).pos(3), dip(t).pos(4), dip(t).pos(5), dip(t).pos(6));
+          fprintf('found minimum after scanning for topography %d on grid point [%g %g %g; %g %g %g]\n', t, dip(t).pos(1,1), dip(t).pos(1,2), dip(t).pos(1,3), dip(t).pos(2,1), dip(t).pos(2,2), dip(t).pos(2,3));
         end
       end
 

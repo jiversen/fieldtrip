@@ -33,6 +33,10 @@ function [dipout] = dipole_fit(dip, sens, headmodel, dat, varargin)
 %   Lutkenhoner B. "Dipole source localization by means of maximum
 %   likelihood estimation I. Theory and simulations" Electroencephalogr Clin
 %   Neurophysiol. 1998 Apr;106(4):314-21.
+%
+% *** JRI *** (jiversen@ucsd.edu) added fixed dipole constraint
+% cfg.dipfit.constr.fixdip (.pos, .mom)
+%  see ft_dipolefitting.m
 
 % Copyright (C) 2003-2016, Robert Oostenveld
 %
@@ -127,7 +131,7 @@ ismeg = ft_senstype(sens, 'meg');
 
 if ismeg && iseeg
   % this is something that I might implement in the future
-  ft_error('simultaneous EEG and MEG not supported');
+  ft_error('simultaneous EEG and MEG not supported. Contact jiversen@ucsd.edu for dipole_fit_meeg.');
 elseif iseeg
   % ensure that the potential data is average referenced, just like the model potential
   dat = avgref(dat);
@@ -165,7 +169,7 @@ end
 [param, fval, exitflag, output] = optimfun(@dipfit_error, param, options, dat, sens, headmodel, constr, metric, checkinside, reducerank, normalize, normalizeparam, weight);
 
 if exitflag==0
-  ft_error('Maximum number of iterations exceeded before reaching the minimum, please try with another initial guess.')
+  ft_warning('Maximum number of iterations exceeded before reaching the minimum, please try with another initial guess.')
 end
 
 % do the linear optimization of the dipole moment parameters
@@ -243,6 +247,13 @@ elseif constr.rigidbody
   pos       = transform * pos;                    % apply the homogenous transformation matrix
   param     = reshape(pos(1:3,:), 1, 3*numdip);
   clear pos                                       % the actual pos will be constructed from param further down 
+end
+
+% *** JRI *** add possibility to have some fixed dipoles
+if isfield(constr,'fixdip')
+    tmp = constr.fixdip.pos';
+    tmp = tmp(:)';
+    param = [tmp param]; %a row vector
 end
 
 if constr.fixedori
