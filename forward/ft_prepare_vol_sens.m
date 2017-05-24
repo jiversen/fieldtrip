@@ -154,8 +154,15 @@ elseif ismeg
   sens.coilpos = sens.coilpos(selcoil,:);
   sens.coilori = sens.coilori(selcoil,:);
   sens.tra     = sens.tra(:,selcoil);
-
-  switch ft_headmodeltype(headmodel)
+  
+  % *** JRI *** also need to adjust headmodel.forwpar if it exists (e.g. for singleshell)
+  % simply delete forwpar and let it be regenerated below with updated sens
+  % coils (still necessary?)
+  if isfield(headmodel,'forwpar'),
+      headmodel = rmfield(headmodel,'forwpar');
+  end
+  
+  switch ft_voltype(headmodel)
     case {'infinite' 'infinite_monopole' 'infinite_currentdipole' 'infinite_magneticdipole'}
       % nothing to do
 
