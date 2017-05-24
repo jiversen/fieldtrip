@@ -13,7 +13,7 @@ function sync {
 latest=`ls -t $* | head -n1`
 for file in $*; do
 if [ $file != $latest ] ; then 
-cp $latest $file
+cp -p $latest $file # JRI 20170523 (jiversen@ucsd.edu) add -p to copy to preserve dates
 fi
 done
 }
