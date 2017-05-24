@@ -270,7 +270,10 @@ elseif ft_senstype(input, 'ctf') && isgrad
   chantype(sel) = {'refmag'};             % reference magnetometers
   sel = myregexp('^[GPQR][0-9][0-9]$', input.label);
   chantype(sel) = {'refgrad'};            % reference gradiometers
-    
+  % *** JRI *** add decoding for EEG channels (Assumes EEGnnn) format
+  sel = myregexp('^EEG[0-9][0-9][0-9]$', grad.label);
+  chantype(sel) = {'eeg'};
+  
 elseif ft_senstype(input, 'ctf') && islabel
   % the channels have to be identified based on their name alone
   sel = myregexp('^M[ZLR][A-Z][0-9][0-9]$', label);
@@ -287,7 +290,10 @@ elseif ft_senstype(input, 'ctf') && islabel
   chantype(sel) = {'trigger'};
   sel = myregexp('UPPT002', label);
   chantype(sel) = {'response'};
-
+  % *** JRI *** add decoding for EEG channels (Assumes EEGnnn) format
+  sel = myregexp('^EEG[0-9][0-9][0-9]$', label);
+  chantype(sel) = {'eeg'};
+  
 elseif ft_senstype(input, 'bti')
   if isfield(input, 'orig') && isfield(input.orig, 'config')
     configname = {input.orig.config.channel_data.name};
