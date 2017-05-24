@@ -153,7 +153,7 @@ elseif ismeg
   sens.coilpos = sens.coilpos(selcoil,:);
   sens.coilori = sens.coilori(selcoil,:);
   sens.tra     = sens.tra(:,selcoil);
-
+  
   % *** JRI *** also need to adjust headmodel.forwpar if it exists (e.g. for singleshell)
   % simply delete forwpar and let it be regenerated below with updated sens
   % coils (still necessary?)
