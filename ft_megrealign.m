@@ -76,6 +76,8 @@ function [data] = ft_megrealign(cfg, data)
 % input/output structure.
 %
 % See also FT_PREPARE_LOCALSPHERES, FT_PREPARE_SINGLESHELL
+%
+% *** JRI *** bugfix; also keeps track of realignment parameters (rv, etc.)
 
 % Copyright (C) 2004-2014, Robert Oostenveld
 %
@@ -185,6 +187,9 @@ for i=1:length(cfg.template)
   elseif isstruct(cfg.template{i}) && isfield(cfg.template{i}, 'pnt') && isfield(cfg.template{i}, 'ori') && isfield(cfg.template{i}, 'tra')
     % it seems to be a pre-2011v1 type gradiometer structure, update it
     tmp = ft_datatype_sens(cfg.template{i});
+  %*** JRI *** handle full on datasets, as advertised in help above
+  elseif isstruct(cfg.template{i}) && isfield(cfg.template{i}, 'grad')
+    tmp = ft_datatype_sens(cfg.template{i}.grad);
   else
     ft_error('unrecognized template input');
   end
@@ -295,6 +300,11 @@ for i=1:Ntrials
     rvbkalign = rv(data.trial{i}, datbkalign);
     ft_info('original             -> original RV %.2f %%\n', 100 * mean(rvnoalign));
     ft_info('original -> template -> original RV %.2f %%\n', 100 * mean(rvbkalign));
+    % *** JRI *** summarize rvs and save
+    alignrv(i,1) = mean(rvrealign);
+    alignrv(i,2) = mean(rvnoalign);
+    alignrv(i,3) = mean(rvbkalign);
+    % *** JRI ***
   end
 end
 
@@ -398,6 +408,9 @@ switch dtype
   otherwise
     % keep the output as it is
 end
+
+% *** JRI *** store alignment info
+interp.cfg.alignrv = alignrv;
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
