@@ -320,6 +320,15 @@ if (isfield(cfg, 'holdfig') && cfg.holdfig==0) || ~isfield(cfg, 'holdfig')
   hold on;
 end
 
+% *** JRI *** optimize for many channels by shrinking text and lines
+if nchan > 20
+  fpv_opt = {'linewidth',0.25,'axis','no','fill','yes','box','no'};
+  fontsize = 6;
+else
+  fpv_opt = {'box', 'yes', 'fill','yes'};
+  fontsize = 10; % original ft value
+end
+
 for k = 1:nchan
   for m = 1:nchan
     if k~=m
@@ -331,7 +340,7 @@ for k = 1:nchan
         ft_plot_matrix(tmp, 'width', 1, 'height', 1, 'hpos', ix.*1.2, 'vpos', iy.*1.2, 'clim', cfg.zlim, 'box', 'yes');
       elseif hasfreq
         tmp = reshape(dat(m,k,:), [nfreq 1]);
-        ft_plot_vector(tmp, 'width', 1, 'height', 1, 'hpos', ix.*1.2, 'vpos', iy.*1.2, 'vlim', cfg.zlim, 'box', 'yes', 'color', cfg.linecolor(1,:), 'linewidth', cfg.linewidth, 'style', cfg.linestyle);
+        ft_plot_vector(tmp, 'width', 1, 'height', 1, 'hpos', ix.*1.2, 'vpos', iy.*1.2, 'vlim', cfg.zlim, 'color', cfg.graphcolor(1), fpv_opt{:});
       elseif hastime
         ft_error('plotting data with only a time axis is not supported yet');
       end
@@ -345,13 +354,11 @@ for k = 1:nchan
           val2 = cfg.zlim(2);
         elseif hastime
         end
-        fontsize = 10;
         ft_plot_text(ix.*1.2-0.5, iy.*1.2-0.5, num2str(val1,3), 'HorizontalAlignment', 'Right', 'VerticalAlignment', 'Middle', 'FontSize', fontsize);
         ft_plot_text(ix.*1.2-0.5, iy.*1.2+0.5, num2str(val2,3), 'HorizontalAlignment', 'Right', 'VerticalAlignment', 'Middle', 'FontSize', fontsize);
       end
       if m==nchan
         % bottom row, plot scale on x axis
-        fontsize = 10;
         ft_plot_text(ix.*1.2-0.5, iy.*1.2-0.5, num2str(cfg.xlim(1),3), 'HorizontalAlignment', 'Center', 'VerticalAlignment', 'top', 'FontSize', fontsize);
         ft_plot_text(ix.*1.2+0.5, iy.*1.2-0.5, num2str(cfg.xlim(2),3), 'HorizontalAlignment', 'Center', 'VerticalAlignment', 'top', 'FontSize', fontsize);
       end
@@ -361,13 +368,13 @@ end
 
 % add channel labels on grand X and Y axes
 for k = 1:nchan
-  ft_plot_text(0.5,     (nchan + 1 - k).*1.2,     data.label{k}, 'horizontalalignment', 'right');
-  ft_plot_text(k.*1.2,  (nchan + 1)    .*1.2-0.5, data.label{k}, 'horizontalalignment', 'left', 'rotation', 90);
+  ft_plot_text(0.5,     (nchan + 1 - k).*1.2,     data.label{k}, 'horizontalalignment', 'right', 'FontSize', fontsize);
+  ft_plot_text(k.*1.2,  (nchan + 1)    .*1.2-0.5, data.label{k}, 'horizontalalignment', 'left', 'rotation', 90, 'FontSize', fontsize);
 end
 
 % add 'from' and 'to' labels
-ft_plot_text(-0.5,            (nchan + 1)/1.7,     '\it{from}', 'interpreter', 'tex', 'rotation', 90);
-ft_plot_text((nchan + 1)/1.7, (nchan + 1)*1.2+0.4, '\it{to}', 'interpreter', 'tex');
+ft_plot_text(-0.5,            (nchan + 1)/1.7,     '\it{from}', 'interpreter', 'tex', 'rotation', 90, 'FontSize', fontsize);
+ft_plot_text((nchan + 1)/1.7, (nchan + 1)*1.2+0.4, '\it{to}', 'interpreter', 'tex', 'FontSize', fontsize);
 
 axis([-0.2 (nchan+1).*1.2+0.2 0 (nchan+1).*1.2+0.2]);
 axis off;
