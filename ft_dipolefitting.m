@@ -90,6 +90,11 @@ function [source] = ft_dipolefitting(cfg, data)
 % input/output structure.
 %
 % See also FT_SOURCEANALYSIS, FT_PREPARE_LEADFIELD, FT_PREPARE_HEADMODEL
+%
+% *** JRI *** (jiversen@ucsd.edu) added fixed dipole constraint
+% cfg.fixdip.pos (n x 3 matrix of fixed dipoles)
+% cfg.fixdip.mom (3 x n matrix of moments)
+%
 
 % TODO change the output format, more suitable would be something like:
 % dip.label
@@ -165,6 +170,7 @@ cfg.gridsearch      = ft_getopt(cfg, 'gridsearch', 'yes');
 cfg.nonlinear       = ft_getopt(cfg, 'nonlinear', 'yes');
 cfg.symmetry        = ft_getopt(cfg, 'symmetry');
 cfg.dipfit          = ft_getopt(cfg, 'dipfit', []);     % the default for this is handled below
+cfg.fixdip          = ft_getopt(cfg, 'fixdip', []);     % *** JRI *** add support for fixed dipoles
 
 cfg = ft_checkconfig(cfg, 'renamed',    {'tightgrid', 'tight'});  % this is moved to cfg.sourcemodel.tight by the subsequent createsubcfg
 cfg = ft_checkconfig(cfg, 'renamed',    {'sourceunits', 'unit'}); % this is moved to cfg.sourcemodel.unit  by the subsequent createsubcfg
@@ -232,6 +238,17 @@ if ft_getopt(cfg.dipfit.constr, 'sequential', false) && strcmp(cfg.model, 'movin
   ft_error('the moving dipole model does not combine with the sequential constraint')
   % see http://bugzilla.fieldtriptoolbox.org/show_bug.cgi?id=3119
 end
+
+% *** JRI *** fixed dipole constraint
+if ~isempty(cfg.fixdip)
+  cfg.fixdip = fixdipole(cfg.fixdip);
+  if ~isfield(cfg.fixdip,'mom')
+    nFixdip = size(cfg.fixdip.pos,1);
+    cfg.fixdip.mom = zeros(3*nFixdip, 1);
+  end
+  cfg.dipfit.constr.fixdip = cfg.fixdip;
+end
+% *** JRI ***
 
 if iscomp
   % transform the data into a representation on which the timelocked dipole fit can perform its trick
