@@ -181,6 +181,11 @@ if basedonshape && basedoncortex
   basedonshape = false;
 end
 
+% *** JRI *** my own use case: use headshape to define inside/outside of grid only
+if basedonshape && basedongrid
+  basedonshape = false;
+end
+
 if basedongrid && basedonpos
   % fall back to default behavior, in which the pos overrides the grid
   basedongrid = false;
@@ -747,6 +752,12 @@ if ~isempty(cfg.symmetry)
   % expand the number of parameters from one (3) to two dipoles (6)
   sourcemodel.pos = sourcemodel.pos(:,expand) .* repmat(mirror, size(sourcemodel.pos,1), 1);
 end
+
+% *** JRI *** add warp-relevant parameters (Where they come from?)
+if isfield(cfg.grid,'templategrid'), grid.templategrid = cfg.grid.templategrid; end
+if isfield(cfg.grid,'warp'), grid.warp = cfg.grid.warp; end
+if isfield(cfg.grid,'res'), grid.res = cfg.grid.res; end % TODO: ?different from cfg.resolution?
+% *** JRI ***
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
