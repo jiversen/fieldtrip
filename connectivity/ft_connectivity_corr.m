@@ -88,6 +88,8 @@ function [c, v, outcnt] = ft_connectivity_corr(input, varargin)
 % FiXME: If output is angle, then jack-knifing should be done
 % differently since it is a circular variable
 
+% JRI: old optimizations: preserve precision of input
+
 hasjack     = ft_getopt(varargin, 'hasjack', 0);
 cmplx       = ft_getopt(varargin, 'complex', 'abs');
 feedback    = ft_getopt(varargin, 'feedback', 'none');
@@ -96,6 +98,8 @@ powindx     = ft_getopt(varargin, 'powindx');
 pownorm     = ft_getopt(varargin, 'pownorm', 0);
 pchanindx   = ft_getopt(varargin, 'pchanindx');
 allchanindx = ft_getopt(varargin, 'allchanindx');
+
+precision = class(input); % *** JRI *** preserve precision
 
 if isempty(dimord)
   ft_error('input parameters should contain a dimord');
@@ -114,7 +118,7 @@ if ~isempty(pchanindx)
   newsiz = siz;
   newsiz(2:3) = numel(chan); % size of partialised csd
   
-  A  = zeros(newsiz);
+  A  = zeros(newsiz, precision);
   
   % FIXME this only works for data without time dimension
   if numel(siz)==5 && siz(5)>1, ft_error('this only works for data without time'); end
@@ -130,6 +134,7 @@ if ~isempty(pchanindx)
   end
   input = A;
   siz = size(input);
+  clear A AA AB BB BA % *** JRI ***
 else
   % do nothing
 end
@@ -138,9 +143,13 @@ end
 if (length(strfind(dimord, 'chan'))~=2 || contains(dimord, 'pos')) && ~isempty(powindx)
   % crossterms are not described with chan_chan_therest, but are linearly indexed
   
-  outsum = zeros(siz(2:end));
-  outssq = zeros(siz(2:end));
-  outcnt = zeros(siz(2:end));
+  n  = siz(1); % *** JRI *** don't compute ssq if unneeded
+  outsum = zeros(siz(2:end), precision);
+  if n>1,
+      outssq = zeros(siz(2:end), precision);
+  end
+  %outcnt = zeros(siz(2:end), precision);
+  outcnt = 0; % *** JRI *** optimize
   ft_progress('init', feedback, 'computing metric...');
   for j = 1:siz(1)
     ft_progress(j/siz(1), 'computing metric for replicate %d from %d\n', j, siz(1));
@@ -153,22 +162,30 @@ if (length(strfind(dimord, 'chan'))~=2 || contains(dimord, 'pos')) && ~isempty(p
     end
     tmp    = complexeval(reshape(input(j,:,:,:,:), siz(2:end))./denom, cmplx);
     outsum = outsum + tmp;
-    outssq = outssq + tmp.^2;
-    outcnt = outcnt + double(~isnan(tmp));
+    if n>1, % *** JRI *** optimize
+        %outssq = outssq + tmp.^2;
+        outssq = outssq + tmp.*conj(tmp);
+    end
+    %outcnt = outcnt + double(~isnan(tmp));
+    outcnt = outcnt + 1;
   end
   ft_progress('close');
   
 elseif length(strfind(dimord, 'chan'))==2 || length(strfind(dimord, 'pos'))==2
   % crossterms are described by chan_chan_therest
-  outsum = zeros(siz(2:end));
-  outssq = zeros(siz(2:end));
-  outcnt = zeros(siz(2:end));
+  n  = siz(1); % *** JRI *** don't compute if only one repeat
+  if n>1,
+      outsum = zeros(siz(2:end), precision);
+      outssq = zeros(siz(2:end), precision);
+  end
+  %outcnt = zeros(siz(2:end), precision);
+  outcnt = 0; % *** JRI *** optimize
   ft_progress('init', feedback, 'computing metric...');
   for j = 1:siz(1)
     ft_progress(j/siz(1), 'computing metric for replicate %d from %d\n', j, siz(1));
     if pownorm
-      p1  = zeros([siz(2) 1 siz(4:end)]);
-      p2  = zeros([1 siz(3) siz(4:end)]);
+      p1  = zeros([siz(2) 1 siz(4:end)], precision);
+      p2  = zeros([1 siz(3) siz(4:end)], precision);
       for k = 1:siz(2)
         p1(k,1,:,:,:,:) = input(j,k,k,:,:,:,:);
         p2(1,k,:,:,:,:) = input(j,k,k,:,:,:,:);
@@ -181,9 +198,15 @@ elseif length(strfind(dimord, 'chan'))==2 || length(strfind(dimord, 'pos'))==2
     end
     tmp    = complexeval(reshape(input(j,:,:,:,:,:,:), siz(2:end))./denom, cmplx); % added this for nan support marvin
     %tmp(isnan(tmp)) = 0; % added for nan support
-    outsum = outsum + tmp;
-    outssq = outssq + tmp.^2;
-    outcnt = outcnt + double(~isnan(tmp));
+    if n==1,
+        outsum = tmp;
+    elseif n>1,
+        outsum = outsum + tmp;
+        %outssq = outssq + tmp.^2;
+        outssq = outssq + tmp.*conj(tmp);
+    end
+    %outcnt = outcnt + double(~isnan(tmp));
+    outcnt = outcnt + 1;
   end
   ft_progress('close');
   
