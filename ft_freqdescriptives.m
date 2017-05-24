@@ -152,6 +152,7 @@ if varflg
   siz    = [size(freq.powspctrm) 1];
   outsum = zeros(siz(2:end));
   outssq = zeros(siz(2:end));
+  outsuma = zeros(siz(2:end)); %*** JRI *** for complex input
   n      = zeros(siz(2:end));
   ft_progress('init', cfg.feedback, 'computing power...');
   for j = 1:siz(1)
@@ -160,7 +161,8 @@ if varflg
     n      = n + double(isfinite(tmp));
     tmp(~isfinite(tmp)) = 0;
     outsum = outsum + tmp;
-    outssq = outssq + tmp.^2;
+    outssq = outssq + abs(tmp).^2; % *** JRI *** modified
+    outsuma = outsuma + abs(tmp); % *** JRI ***
   end
   ft_progress('close');
 
@@ -172,6 +174,10 @@ if varflg
 
   powspctrm    = outsum./n;
   powspctrmsem = sqrt(bias.*(outssq - (outsum.^2)./n)./(n - 1)./n);
+  evokedspctrm = abs(powspctrm); % *** JRI ***
+  inducedspctrm = outsuma ./ n;  % *** JRI ***
+  inducedspctrmsem = sqrt(bias.*(outssq - (outsuma.^2)./n)./(n - 1)./n);
+  
 elseif keepflg
   %nothing to do
   powspctrm = freq.powspctrm;
@@ -210,6 +216,11 @@ if exist('powspctrmsem', 'var'), output.powspctrmsem = powspctrmsem; end
 if strcmp(cfg.keeptrials, 'yes') && isfield(freq, 'trialinfo')
   output.trialinfo = freq.trialinfo;
 end
+
++% *** JRI *** stash different computed spectra
+try, output.evokedspctrm = evokedspctrm; end;
+try, output.inducedspctrm = inducedspctrm; end;
+try, output.inducedspctrmsem = inducedspctrmsem; end;
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
