@@ -10,6 +10,14 @@ function data = fixsampleinfo(data)
 
 % Copyright (C) 2009-2020, Robert Oostenveld and Jan-Mathijs Schoffelen
 
+% *** JRI *** check if we've converted old style NSI Trialinfo to new-style
+nsi_trlinfo = ft_findcfg(data.cfg, 'trlinfo'); %*** JRI *** NSI specific trial information (cell)
+if ~isfield(data, 'nsi_trialinfo') && ~isempty(nsi_trlinfo),
+    error('will need to fix this--look at jriChanges.html for code')
+    %/Users/jri/Documents/matlab/matlab/library/contrib/fieldtrip/fieldtrip-temp/jriChanges.html
+end
+% *** JRI ***
+
 if isfield(data, 'sampleinfo')
   % sampleinfo is present (as requested), trialinfo is optional
   return
