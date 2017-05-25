@@ -577,6 +577,7 @@ if isempty(cfg.trl)
   ft_error('No trials left after artifact rejection.')
 else
   if hasdata
+      dataorig = data; % *** JRI *** for fix below
     switch (cfg.artfctdef.reject)
       case 'complete'
         % only keep the trials without any artifacts
@@ -636,8 +637,14 @@ else
         ft_error('unsupported cfg.artfctdef.reject');
     end % switch
 
+    % handle NSI custom field
+    if isfield(dataorig,'nsi_trialinfo')
+        data.nsi_trialinfo = dataorig.nsi_trialinfo;
+        data.nsi_trialinfo(trlRemovedInd)=[];
+    end
   end % hasdata
 end
+
 
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
