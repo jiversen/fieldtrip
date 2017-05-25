@@ -561,10 +561,16 @@ else
   if hasdata && ~strcmp(cfg.artfctdef.reject, 'nan') % Skip this step to avoid removing parts that should be filled with NaNs
     % apply the updated trial definition on the data
     tmpcfg      = keepfields(cfg, {'trl', 'showcallinfo'});
+    dataorig = data; % *** JRI *** for fix below
     data        = removefields(data, {'trialinfo'});
     data        = ft_redefinetrial(tmpcfg, data);
     % restore the provenance information
     [cfg, data] = rollback_provenance(cfg, data);
+        % handle NSI custom field
+        if isfield(dataorig,'nsi_trialinfo')
+          data.nsi_trialinfo = dataorig.nsi_trialinfo;
+          data.nsi_trialinfo(trlRemovedInd)=[];
+        end
   end
 end
 
