@@ -220,8 +220,9 @@ if ~isempty(cfg.toilim)
       endsample(i) = nan;
       skiptrial(i) = true;
     else
-      begsample(i) = nearest(data.time{i}, cfg.toilim(i,1));
-      endsample(i) = nearest(data.time{i}, cfg.toilim(i,2));
+      begsample(i) = nearest(data.time{i}, cfg.toilim(1));
+      % *** JRI *** interval by my convention is [ ), not [ ]
+      endsample(i) = nearest(data.time{i}, cfg.toilim(2)) - 1;
       data.trial{i} = data.trial{i}(:, begsample(i):endsample(i));
       data.time{i}  = data.time{i} (   begsample(i):endsample(i));
     end
@@ -302,8 +303,22 @@ elseif ~isempty(cfg.trl)
   data.trial    = cell(1,size(newtrl,1));
   data.time     = cell(1,size(newtrl,1));
   
-  if isfield(dataold, 'trialinfo')
-    ft_warning('Original data has trialinfo, using user-specified trialinfo instead');
+   % *** JRI *** special case: trl is identical to original. This happens whin
+  % cfgj.artfctdef.reject = 'none', or if no artifacs were found, for example.
+  % I care because I have some cases in which iTrlorig below could point to
+  %   2 original trials and thus trialinfo is invalidated. 
+  % This is a flaw in 
+  %   ft still relying on trl instead of new sampleinfo/trialinfo in doing the
+  %   rejection...
+  if isequal(cfg.trl(:,1:2),dataold.sampleinfo),
+    data.trial = dataold.trial;
+    data.time = dataold.time;
+    data.sampleinfo = dataold.sampleinfo;
+    data.trialinfo = dataold.trialinfo;
+  end
+  
+  if isfield(dataold,'trialinfo')
+    ft_warning('Original data has trialinfo, using user specified trialinfo instead');
   end
   
   if ~istable(newtrl)
@@ -339,6 +354,7 @@ elseif ~isempty(cfg.trl)
       end
     end
   end % for iTrl
+  end % *** JRI *** special case short-circuit check
   
   % adjust the sampleinfo in the output
   if isfield(dataold, 'sampleinfo')
@@ -346,6 +362,17 @@ elseif ~isempty(cfg.trl)
     data.sampleinfo  = [begsample endsample];
   end
   
+  % *** JRI *** copy over our fields of interest
+  data = copyheadmodel(dataold, data);
+  % *** JRI *** keep nsi_trialinfo in sync with trialinfo
+  if isfield(dataold, 'nsi_trialinfo')
+    data.nsi_trialinfo = dataold.nsi_trialinfo(data.trialinfo(:,5));
+  end
+  if isfield(dataold, 'cfg') %12/28/11 JRI: why is this omitted? shouldn't have stale trl
+    data.cfg = dataold.cfg;
+  end
+  % *** JRI ***
+
 elseif ~isempty(cfg.length)
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % cut the existing trials into segments of the specified length
