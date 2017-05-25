@@ -126,6 +126,9 @@ function [data] = ft_preprocessing(cfg, data)
 % input/output structure.
 %
 % See also FT_DEFINETRIAL, FT_REDEFINETRIAL, FT_APPENDDATA, FT_APPENDSPIKE
+%
+% *** JRI ***
+%   add short-circuit option if no preprocessing requested
 
 % Guidelines for use in an analysis pipeline:
 % After FT_PREPROCESSING you will have raw data represented as a single
@@ -172,6 +175,14 @@ function [data] = ft_preprocessing(cfg, data)
 %    along with FieldTrip. If not, see <http://www.gnu.org/licenses/>.
 %
 % $Id$
+
+% *** JRI *** short circuit for speed
+if isempty(cfg) && nargin==2
+  dataout = data;
+  disp('JRI: empty cfg. Do nothing.')
+  return
+end
+% *** JRI ***
 
 % these are used by the ft_preamble/ft_postamble function and scripts
 ft_revision = '$Id$';
@@ -334,7 +345,10 @@ if hasdata
   
   % this will contain the newly processed data
   % some fields from the input should be copied over in the output
-  dataout = keepfields(data, {'hdr', 'fsample', 'grad', 'elec', 'opto', 'sampleinfo', 'trialinfo', 'topo', 'topolabel', 'unmixing'});
+  dataout = keepfields(data, {'hdr', 'fsample', 'grad', 'elec', 'opto', 'sampleinfo', 'trialinfo', 'topo', 'topolabel', 'unmixing','nsi_trialinfo'});
+  % *** JRI ***
+  dataout = copyheadmodel(data, dataout); %take all parts of headmodel, not just grad
+  % *** JRI ***
   
   ft_progress('init', cfg.feedback, 'preprocessing');
   ntrl = length(data.trial);
