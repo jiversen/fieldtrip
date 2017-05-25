@@ -360,7 +360,14 @@ elseif isfreq
   end
 end
 
-if isfreq && isfield(data, 'labelcmb')
+%***JRI*** fixme--they have disabled component data for this function and I need it!
+convertcomp = false;
+if iscomp && (strcmp(cfg.method, 'rv') || strcmp(cfg.method, 'music') || strcmp(cfg.method,'lcmv') || strcmp(cfg.method,'sam')) %***JRI*** add lcmv, sam
+  % these timelock methods are also supported for frequency or component data
+  if iscomp
+    % the conversion will be done below, after the latency and channel selection
+  end
+elseif isfreq && isfield(data, 'labelcmb')
   % ensure that the cross-spectral densities are chan_chan_therest,
   % otherwise the latency and frequency selection could fail, so we don't
   % need to worry about linearly indexed cross-spectral densities below
