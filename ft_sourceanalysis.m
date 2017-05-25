@@ -325,7 +325,7 @@ elseif iscomp
 end
 
 convertcomp = false;
-if iscomp && (strcmp(cfg.method, 'rv') || strcmp(cfg.method, 'music'))
+if iscomp && (strcmp(cfg.method, 'rv') || strcmp(cfg.method, 'music') || strcmp(cfg.method,'lcmv') || strcmp(cfg.method,'sam')) %***JRI*** add lcmv, sam
   % these timelock methods are also supported for frequency or component data
   if iscomp
     convertcomp = true;
