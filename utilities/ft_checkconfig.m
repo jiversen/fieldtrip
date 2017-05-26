@@ -81,6 +81,10 @@ checkinside     = ft_getopt(varargin, 'inside2logical', 'off');
 checksize       = ft_getopt(varargin, 'checksize', 'off');
 trackconfig     = ft_getopt(varargin, 'trackconfig');
 
+% *** JRI *** maddening, assert a sensible default for me, regardless of
+% caller intention
+checksize = 'off';
+
 if ~isempty(trackconfig) && strcmp(trackconfig, 'on')
   if ft_platform_supports('matlabversion', '2015a', inf)
     % disable config tracking for the time being, due to a known bug (3187)
