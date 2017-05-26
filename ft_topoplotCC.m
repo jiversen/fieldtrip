@@ -201,7 +201,7 @@ for i=srtidx(:)'
         arrowbeg  = cfg.arrowlength * (arrowbeg-center) + center + cfg.arrowoffset * offset;
         arrowend  = cfg.arrowlength * (arrowend-center) + center + cfg.arrowoffset * offset;
 
-        h = arrow(arrowbeg, arrowend, 'Ends', cfg.arrowhead, 'length', 0.05);
+        h = arrow(arrowbeg, arrowend, 'Ends', cfg.arrowhead, 'length', cfg.arrowsize); % *** JRI *** parameterized length
 
       end % if arrow
       if ~isempty(widthparam)
