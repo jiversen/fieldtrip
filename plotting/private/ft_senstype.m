@@ -206,6 +206,12 @@ if isdata
   elseif isfield(input, 'label')
     sens.label = input.label;
     islabel    = true;
+  elseif isfield(input, 'sens') % *** JRI *** handle multimodal case
+    if ~iscell(desired)
+      desired = repmat({desired},size(input));
+    end
+    type = ft_senstype(input.sens, desired);
+    return % *** JRI ***
   else
     sens = [];
   end
@@ -223,6 +229,8 @@ elseif isheader
   elseif isfield(input, 'label')
     sens.label = input.label;
     islabel    = true;
+  else
+    sens = []; % *** JRI *** MRI structs have a hdr, but no sens
   end
   
 elseif isgrad

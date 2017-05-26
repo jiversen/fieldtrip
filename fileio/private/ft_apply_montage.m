@@ -502,13 +502,14 @@ switch inputtype
     clear input
 
     Ntrials = numel(data.trial);
+    fulltra = full(montage.tra); %***JRI*** for efficiency, do only once
     ft_progress('init', feedback, 'processing trials');
     for i=1:Ntrials
       ft_progress(i/Ntrials, 'processing trial %d from %d\n', i, Ntrials);
       if isa(data.trial{i}, 'single')
         % sparse matrices and single
         % precision do not match
-        data.trial{i} = full(montage.tra) * data.trial{i};
+        data.trial{i} = fulltra * data.trial{i};
       else
         data.trial{i} = montage.tra * data.trial{i};
       end
