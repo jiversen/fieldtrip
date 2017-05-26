@@ -302,6 +302,20 @@ if computecov
   timelock.cov = covsig;
 end
 
+% some fields from the input should be copied over in the output
+timelock = copyfields(data, timelock, {'grad', 'elec', 'opto', 'topo', 'topolabel', 'unmixing'});
+
+if isfield(data, 'trialinfo') && strcmp(cfg.keeptrials, 'yes')
+  timelock.trialinfo = data.trialinfo;
+end
+if isfield(data, 'sampleinfo') && strcmp(cfg.keeptrials, 'yes')
+  timelock.sampleinfo = data.sampleinfo;
+end
+
+% *** JRI *** copy over headmodel related fields to average
+timelock = copyheadmodel(data,timelock);
+% *** JRI ***
+
 % do the general cleanup and bookkeeping at the end of the function
 ft_postamble debug
 ft_postamble previous   data
