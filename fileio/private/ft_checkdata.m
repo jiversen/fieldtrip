@@ -125,7 +125,7 @@ haschantype          = ft_getopt(varargin, 'haschantype', 'no');
 haschanunit          = ft_getopt(varargin, 'haschanunit', 'no');
 hassampleinfo        = ft_getopt(varargin, 'hassampleinfo', 'ifmakessense');
 hasdim               = ft_getopt(varargin, 'hasdim');
-hascumtapcnt         = ft_getopt(varargin, 'hascumtapcnt');
+hascumtapcnt         = ft_getopt(varargin, 'hascumtapcnt', 'no'); % *** JRI ***
 hasdof               = ft_getopt(varargin, 'hasdof');
 hasbrain             = ft_getopt(varargin, 'hasbrain');
 cmbstyle             = ft_getopt(varargin, 'cmbstyle'); % sparse, sparsewithpow, full, fullfast, fourier
@@ -773,6 +773,8 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'sparsewithpow')
     nrpt = size(data.cumtapcnt,1);
   else
     nrpt = 1;
+    flag = 1; % *** JRI ***
+    data.cumtapcnt = 1; % *** JRI *** using tfr so only one taper
   end
   if contains(data.dimord, 'freq'), nfrq = length(data.freq); else nfrq = 1; end
   if contains(data.dimord, 'time'), ntim = length(data.time); else ntim = 1; end
@@ -861,6 +863,8 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'sparse')
     nrpt = size(data.cumtapcnt,1);
   else
     nrpt = 1;
+    flag = 1; % *** JRI ***
+    data.cumtapcnt = 1; % *** JRI *** using tfr so only one taper
   end
   if contains(data.dimord, 'freq'), nfrq = length(data.freq); else nfrq = 1; end
   if contains(data.dimord, 'time'), ntim = length(data.time); else ntim = 1; end
@@ -951,6 +955,7 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'full')
   else
     nrpt = 1;
     flag = 1;
+    data.cumtapcnt = 1; % *** JRI *** using tfr so only one taper
   end
   if contains(data.dimord, 'freq'), nfrq = length(data.freq); else nfrq = 1; end
   if contains(data.dimord, 'time'), ntim = length(data.time); else ntim = 1; end
