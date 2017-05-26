@@ -45,6 +45,9 @@ function [cfg] = ft_sourceplot(cfg, functional, anatomical)
 %                          will be opaque and the value closest to zero transparent
 %                        - Make your own field in the data with values between 0 and 1 to control opacity directly
 %
+%   cfg.coloroverlayparameter = x,y,z,{rgb} volume data to plot as
+%                         color overlaid on the anatomy *** JRI ***
+%
 % The following parameters can be used in all methods:
 %   cfg.downsample    = downsampling for resolution reduction, integer value (default = 1) (orig: from surface)
 %   cfg.atlas         = string, filename of atlas to use (default = []) see FT_READ_ATLAS
@@ -167,6 +170,10 @@ function [cfg] = ft_sourceplot(cfg, functional, anatomical)
 %   cfg.vertexcolor    = [r g b] values or string, for example 'brain', 'cortex', 'skin', 'black', 'red', 'r',
 %                        or an Nx3 or Nx1 array where N is the number of vertices
 %   cfg.edgecolor      = [r g b] values or string, for example 'brain', 'cortex', 'skin', 'black', 'red', 'r'
+%
+%   cfg.surftransform  = standard SPM transform. If specified, will convert
+%                        surface points correctly into head coordinates
+%                        (*** JRI ***)
 %
 % When cfg.method = 'cloud', the functional data will be rendered as as clouds (groups of points), 
 % spheres, or single points at each sensor position. These spheres or point clouds can either be 
@@ -337,6 +344,9 @@ cfg.maskparameter = parameterselection(cfg.maskparameter, functional);
 try, cfg.funparameter  = cfg.funparameter{1};  end
 try, cfg.maskparameter = cfg.maskparameter{1}; end
 
+% *** JRI ***
+cfg.coloroverlayparameter = ft_getopt(cfg, 'coloroverlayparameter', []);
+
 if isfield(functional, 'time') || isfield(functional, 'freq')
   % make a selection of the time and/or frequency dimension
   tmpcfg = keepfields(cfg, {'frequency', 'avgoverfreq', 'keepfreqdim', 'latency', 'avgovertime', 'keeptimedim', 'showcallinfo', 'trackcallinfo', 'trackusage', 'trackdatainfo', 'trackmeminfo', 'tracktimeinfo', 'checksize'});
@@ -426,6 +436,15 @@ if hasana
   ana  = (ana-dmin)./(dmax-dmin);
   ana  = reshape(ana, dim);
 end
+
+%%% *** JRI *** color overlay parameter
+if isempty(cfg.coloroverlayparameter)
+  hascoloroverlay = 0;
+else
+  hascoloroverlay = 1;
+  coloroverlay = getsubfield(data, cfg.coloroverlayparameter);
+end
+%%% *** JRI ***
 
 %%% funparameter
 hasfun = isfield(functional, cfg.funparameter);
@@ -784,11 +803,13 @@ switch cfg.method
         if hasana, ana = permute(ana,[2 3 1]); end
         if hasfun, fun = permute(fun,[2 3 1]); end
         if hasmsk, msk = permute(msk,[2 3 1]); end
+        if hasoverlay, coloroverlay = permute(coloroverlay, [2 3 1]); end % *** JRI ***
         cfg.slicedim=3;
       case 2
         if hasana, ana = permute(ana,[3 1 2]); end
         if hasfun, fun = permute(fun,[3 1 2]); end
         if hasmsk, msk = permute(msk,[3 1 2]); end
+        if hasoverlay, coloroverlay = permute(coloroverlay, [3 1 2]); end % *** JRI ***
         cfg.slicedim=3;
       otherwise
         % nothing needed
@@ -827,6 +848,9 @@ switch cfg.method
     if hasfun; new_fun = fun(:,:,ind_allslice); clear fun; fun=new_fun; clear new_fun; end
     if hasmsk; new_msk = msk(:,:,ind_allslice); clear msk; msk=new_msk; clear new_msk; end
     
+    % *** JRI ***
+    if hascoloroverlay; coloroverlay = coloroverlay(:,:,ind_allslice,:); end
+  
     % update the dimensions of the volume
     if hasana
       dim=size(ana);
@@ -868,17 +892,24 @@ switch cfg.method
       if hasmsk
         quilt_msk(ybeg*m+1:(ybeg+1)*m, xbeg*n+1:(xbeg+1)*n)=msk(:,:,iSlice);
       end
+      % *** JRI ***
+      if hascoloroverlay
+        quilt_co(ybeg*m+1:(ybeg+1)*m, xbeg*n+1:(xbeg+1)*n,:) = squeeze(coloroverlay(:,:,iSlice,:));
+      end
+      % *** JRI ***
     end
     % make vols and scales, containes volumes to be plotted (fun, ana, msk), added by ingnie
     if hasana; vols2D{1} = quilt_ana; scales{1} = []; end % needed when only plotting ana
     if hasfun; vols2D{2} = quilt_fun; scales{2} = [fcolmin fcolmax]; end
     if hasmsk; vols2D{3} = quilt_msk; scales{3} = [opacmin opacmax]; end
+    if hascoloroverlay, vols2D{4} = quilt_co; scales{4} = [0 1]; end % *** JRI ***
     
     % the transpose is needed for displaying the matrix using the MATLAB image() function
     if hasana;             ana = vols2D{1}'; end
     if hasfun && ~doimage; fun = vols2D{2}'; end
     if hasfun &&  doimage; fun = permute(vols2D{2},[2 1 3]); end
     if hasmsk;             msk = vols2D{3}'; end
+    if hascoloroverlay,    co  = permute(vols2D{4},[2 1 3]); end % *** JRI ***
     
     if hasana
       % scale anatomy between 0 and 1
@@ -888,7 +919,14 @@ switch cfg.method
       ana = (ana-amin)./(amax-amin);
       clear amin amax;
       % convert anatomy into RGB values
-      ana = cat(3, ana, ana, ana);
+      % *** JRI *** tinted by color overlay
+      if hascoloroverlay
+        co(co==0)=1; %want anatomy outside of marked regions to show through
+        ana = ana(:,:,[1 1 1]) .* co;
+      else
+        ana = cat(3, ana, ana, ana);
+      end
+      % *** JRI ***
       ha = imagesc(ana);
     end
     hold on
@@ -1186,7 +1224,12 @@ switch cfg.method
       if isfield(surf, 'transform')
         % compute the vertex positions in head coordinates
         surf.pos = ft_warp_apply(surf.transform, surf.pos);
+      elseif isfield(cfg,'surftransform')
+        % *** JRI *** instead of bothering w/ volumenormalize, transform
+        %   surface points from spm -> voxel -> subj-specific ctf/bti space
+        surf.pos = ft_warp_apply(cfg.surftransform, surf.pos);
       end
+      
       % ensure that the surface is formatted properly
       surf = ft_checkdata(surf, 'hasunit', isfield(functional, 'unit'), 'hascoordsys', isfield(functional, 'coordsys'));
       if isfield(functional, 'unit')
@@ -1279,6 +1322,10 @@ switch cfg.method
         if isfield(surf, 'transform')
           % compute the surface vertices in head coordinates
           surf.pos = ft_warp_apply(surf.transform, surf.pos);
+        elseif isfield(cfg,'surftransform')
+          % *** JRI *** instead of bothering w/ volumenormalize, transform
+          %   surface points from spm -> voxel -> subj-specific ctf/bti space
+          surf.pos = ft_warp_apply(cfg.surftransform, surf.pos);
         end
       end
     end
@@ -1311,6 +1358,10 @@ switch cfg.method
     end
     
     lighting gouraud
+    axis   off;
+    axis vis3d;
+    axis equal;
+
     
     if istrue(cfg.camlight)
       camlight
