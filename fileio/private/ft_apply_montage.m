@@ -500,6 +500,7 @@ switch inputtype
     % see http://bugzilla.fieldtriptoolbox.org/show_bug.cgi?id=3035 and https://github.com/fieldtrip/fieldtrip/issues/2169
 
     Ntrials = numel(data.trial);
+    fulltra = full(montage.tra); %***JRI*** for efficiency, do only once
     ft_progress('init', feedback, 'processing trials');
     for i=1:Ntrials
       ft_progress(i/Ntrials, 'processing trial %d from %d\n', i, Ntrials);
