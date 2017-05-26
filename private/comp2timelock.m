@@ -40,3 +40,6 @@ if isfield(comp, 'elec')
   timelock.elec = comp.elec;
 end
 
+% ***JRI*** copy full set of headmodel data, covariance
+timelock = copyheadmodel(comp,timelock);
+timelock = copyfields(comp,timelock,{'cov'});
