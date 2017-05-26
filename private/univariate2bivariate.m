@@ -60,7 +60,7 @@ switch dtype
     if strcmp(inparam, 'fourierspctrm') && strcmp(outparam, 'crsspctrm')
       % fourier coefficients -> cross-spectral density
       if dofull
-        data = ft_checkdata(data, 'cmbstyle', 'full');
+        data = ft_checkdata(data, 'cmbrepresentation', 'fullfast'); % ***JRI*** optimization
       else
         data = ft_checkdata(data, 'cmbstyle', 'sparse', 'channelcmb', cmb);
         getpowindx = 1;
