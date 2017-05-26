@@ -109,7 +109,7 @@ haschantype          = ft_getopt(varargin, 'haschantype', 'no');
 haschanunit          = ft_getopt(varargin, 'haschanunit', 'no');
 hassampleinfo        = ft_getopt(varargin, 'hassampleinfo', 'ifmakessense');
 hasdim               = ft_getopt(varargin, 'hasdim');
-hascumtapcnt         = ft_getopt(varargin, 'hascumtapcnt');
+hascumtapcnt         = ft_getopt(varargin, 'hascumtapcnt', 'no'); % *** JRI ***
 hasdof               = ft_getopt(varargin, 'hasdof');
 cmbrepresentation    = ft_getopt(varargin, 'cmbrepresentation');
 channelcmb           = ft_getopt(varargin, 'channelcmb');
@@ -768,6 +768,8 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'sparsewithpow')
     flag = 0;
   else
     nrpt = 1;
+    flag = 1; % *** JRI ***
+    data.cumtapcnt = 1; % *** JRI *** using tfr so only one taper
   end
   if ~isempty(strmatch('freq',  dimtok)), nfrq=length(data.freq);      else nfrq = 1; end
   if ~isempty(strmatch('time',  dimtok)), ntim=length(data.time);      else ntim = 1; end
@@ -810,7 +812,7 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'sparsewithpow')
       end
     end
     
-    crsspctrm = zeros(nrpt,ncmb,nfrq,ntim)+i.*zeros(nrpt,ncmb,nfrq,ntim);
+    crsspctrm = zeros(nrpt,ncmb,nfrq,ntim)+1i.*zeros(nrpt,ncmb,nfrq,ntim);
     if fastflag
       for p = 1:ntap
         tmpdat1   = data.fourierspctrm(p:ntap:end,cmbindx(:,1),:,:,:);
@@ -858,6 +860,8 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'sparse')
     flag = 0;
   else
     nrpt = 1;
+    flag = 1; % *** JRI ***
+    data.cumtapcnt = 1; % *** JRI *** using tfr so only one taper
   end
   if ~isempty(strmatch('freq',  dimtok)), nfrq=length(data.freq); else nfrq = 1; end
   if ~isempty(strmatch('time',  dimtok)), ntim=length(data.time); else ntim = 1; end
@@ -950,6 +954,7 @@ elseif strcmp(current, 'fourier') && strcmp(desired, 'full')
   else
     nrpt = 1;
     flag = 1;
+    data.cumtapcnt = 1; % *** JRI *** using tfr so only one taper
   end
   if ~isempty(strmatch('rpttap',dimtok)), nrpt=size(data.cumtapcnt, 1); else nrpt = 1; end
   if ~isempty(strmatch('freq',  dimtok)), nfrq=length(data.freq);       else nfrq = 1; end
