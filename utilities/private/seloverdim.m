@@ -148,7 +148,11 @@ switch seldim
     if isfield(data, 'trialinfo')
       data.trialinfo = data.trialinfo(tmpsel, :);
     end
-   
+    
+    %*** JRI ***
+    if isfield(data, 'nsi_trialinfo'), data.nsi_trialinfo = data.nsi_trialinfo(selrpt); end
+    %*** JRI ***
+    
   case 'rpttap'
     % nothing to do
   case 'chan'
