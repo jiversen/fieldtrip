@@ -7,9 +7,15 @@ function [posR, triR] = remove_double_vertices(pos, tri)
 % Use as
 %   [pos, tri] = remove_double_vertices(pos, tri)
 
-pos1 = unique(pos, 'rows');
-keeppos   = find(ismember(pos1,pos,'rows'));
+% pos1 = unique(pos, 'rows');
+% keeppos   = find(ismember(pos1,pos,'rows'));
+[pos1, keeppos] = unique(pos, 'rows'); % *** JRI *** improved works
 removepos = setdiff([1:size(pos,1)],keeppos);
+
+% *** JRI *** remove NAN points introduced by fairsurface
+tmp = find(any(isnan(pos),2));
+removepos = union(removepos, tmp);
+% *** JRI ***
 
 npos = size(pos,1);
 ntri = size(tri,1);

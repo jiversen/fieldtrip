@@ -76,7 +76,8 @@ if ~isempty(cfg.numvertices) && ~strcmp(cfg.numvertices, 'same')
     % and retriangulate it to the desired accuracy
     [pos2, tri2] = mysphere(cfg.numvertices); % this is a regular triangulation
     [pos1, tri1] = retriangulate(pos1, tri1, pos2, tri2, 2);
-    [pos1, tri1] = fairsurface(pos1, tri1, 1); % this helps redistribute the superimposed points
+    [pnt1, tri1] = remove_double_vertices(pnt1,tri1); % *** JRI *** must remove dups for fairsurface to work
+    [pos1, tri1] = fairsurface(pos1, tri1, 1);% this helps redistribute the superimposed points
     
     % remove double vertices
     [headshape(i).pos,headshape(i).tri] = remove_double_vertices(pos1, tri1);
