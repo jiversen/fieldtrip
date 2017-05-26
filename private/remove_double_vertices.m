@@ -34,6 +34,11 @@ npos = size(pos, 1);
 [dum, keeppos, i2] = unique(pos, 'rows');
 clear dum
 
+% *** JRI *** remove NAN points introduced by fairsurface FIXME: does nothing at moment
+tmp = find(any(isnan(pos),2));
+removepos = union(removepos, tmp);
+% *** JRI ***
+
 numb    = zeros(1,npos);
 numb(keeppos) = 1:length(keeppos);
 
