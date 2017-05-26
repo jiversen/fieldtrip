@@ -19,6 +19,7 @@ function [varargout] = ft_plot_vector(varargin)
 %   'style'           = see MATLAB standard line properties
 %   'tag'             = string, the name assigned to the object. All tags with the same name can be deleted in a figure, without deleting other parts of the figure.
 %   'box'             = draw a box around the local axes, can be 'yes' or 'no'
+%   'fill'            = fill area under curve ('yes', 'no'). Works only when plotting a single curve. (JRI)
 %
 % The line color can be specified in a variety of ways
 %   - as a string with one character per line that you want to plot. Supported colors are teh same as in PLOT, i.e. 'bgrcmykw'.
@@ -132,6 +133,9 @@ fontsize        = ft_getopt(varargin, 'fontsize',   get(0, 'defaulttextfontsize'
 fontname        = ft_getopt(varargin, 'fontname',   get(0, 'defaulttextfontname'));
 fontweight      = ft_getopt(varargin, 'fontweight', get(0, 'defaulttextfontweight'));
 fontunits       = ft_getopt(varargin, 'fontunits',  get(0, 'defaulttextfontunits'));
+
+% *** JRI ***
+fill = ft_getopt(varargin, 'fill','no'); fill = istrue(fill);
 
 % if any(size(vdat)==1)
 %   % ensure that it is a column vector
@@ -276,6 +280,16 @@ if ~isempty(highlight) && ~islogical(highlight)
   end
   highlight=logical(highlight);
 end
+
+% *** JRI *** plot shading (area under curve) first, to lie under highlights and curve
+% TODO: only works for single curve now, may not work for all color types?
+if fill && size(vdat,1)==1
+  hdat2 = [hdat(1) hdat(:)' hdat(end) hdat(1)];
+  y0 = interp1(vlim, vpos + [-height/2 height/2], 0, 'linear', 'extrap');
+  vdat2 = [y0 vdat(:)' y0 y0];
+  patch(hdat2, vdat2, color)
+end
+% *** JRI ***
 
 switch highlightstyle
   case 'box'
