@@ -53,7 +53,7 @@ end
 if ~allowscaling
   % allow for some numerical imprecision
   if (abs(det(rotation))-1)>1e-6
-    ft_error('only a rigid body transformation without rescaling is allowed');
+    ft_warning('only a rigid body transformation without rescaling is allowed'); % *** JRI *** downgraded, I do rescale
   end
 end
 
