@@ -59,8 +59,17 @@ else
   is_matlab=ft_platform_supports('matlabversion',1,inf);
   if is_matlab
     % use Mathworks slow version
-    dat = medfilt1(dat, order, [], 2);
-  else
+    % *** JRI *** optimize call from artifact_jump? TODO: generalize
+    if order == 9
+      [nChan, nTime] = size(dat);
+      tmpdat = [zeros(nChan,4) dat zeros(nChan,4)];
+      for k = 1:nTime
+        tmp = sort(tmpdat(:,k:k+8),2);
+        dat(:,k) = tmp(:,5);
+      end
+    else
+      dat = medfilt1(dat, order, [], 2);
+    end
     % use helper function that uses Octave's medfilt1
     dat = medfilt1_rowwise(dat, order);
   end
