@@ -16,7 +16,9 @@ function [pos, tri] = headsurface(headmodel, sens, varargin)
 %   npos           = number of vertices (default is determined automatic)
 %   downwardshift  = boolean, this will shift the lower rim of the helmet down with approximately 1/4th of its radius (default is 1)
 %   inwardshift    = number (default = 0)
-%   headshape      = string, file containing the head shape
+%   headshape      = string, file containing the head shape, or struct
+%
+% *** JRI *** improved method for triangulating multisphere volume model
 
 % Copyright (C) 2005-2006, Robert Oostenveld
 %
@@ -163,6 +165,9 @@ elseif ft_headmodeltype(headmodel, 'localspheres')
   %  make a triangularization that is needed to find the rim of the helmet
   prj = elproj(pos);
   tri = delaunay(prj(:,1),prj(:,2));
+  % *** JRI *** try to recover convex parts at front of head shell
+  tri = unshard(prj, tri); %get rid of unlikely long and narrow triangles
+  % *** JRI ***
   % find the lower rim of the helmet shape
   [pos, line] = find_mesh_edge(pos, tri);
   edgeind     = unique(line(:));
@@ -204,7 +209,16 @@ end
 % retriangulate the skin/brain/cortex surface to the desired number of vertices
 if ~isempty(npos) && size(pos,1)~=npos
   [pnt2, tri2] = mesh_sphere(npos);
-  [pos, tri]   = retriangulate(pos, tri, pnt2, tri2, 2);
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %***JRI***
+  % better method of retriangulation for headshell
+  if ft_voltype(vol, 'multisphere')
+    [pnt, tri] = jiretriangulate(pnt, tri, pnt2, tri2);
+  else
+    %original method
+    [pnt, tri] = retriangulate(pnt, tri, pnt2, tri2, 2);
+  end
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
 
 % shift the surface inward with the specified amount
