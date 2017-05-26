@@ -128,7 +128,7 @@ end
 dtype = ft_datatype(input);
 switch dtype
   case 'grad'
-    if globalrescale || axesrescale, ft_error('only a rigid body transformation without rescaling is allowed'); end
+    if globalrescale || axesrescale, ft_warning('only a rigid body transformation without rescaling is allowed'); end % *** JRI *** downgraded to warning as I _do_ rescale [FIXME: but why would that be valid?]
   case {'mesh', 'mesh+label'}
     % there can be multiple meshes as a struct-array
     if isstruct(input) && length(input)>1
