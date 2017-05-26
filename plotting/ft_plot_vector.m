@@ -143,6 +143,9 @@ facealpha       = ft_getopt(varargin, 'facealpha', 1);
 % *** JRI ***
 fill = ft_getopt(varargin, 'fill','no'); fill = istrue(fill);
 
+% *** JRI ***
+fill = ft_getopt(varargin, 'fill','no'); fill = istrue(fill);
+
 % if any(size(vdat)==1)
 %   % ensure that it is a column vector
 %   vdat = vdat(:);
