@@ -105,7 +105,7 @@ end
 dtype = ft_datatype(input);
 switch dtype
   case 'grad'
-    if globalrescale || axesrescale, ft_error('only a rigid body transformation without rescaling is allowed'); end
+    if globalrescale || axesrescale, ft_warning('only a rigid body transformation without rescaling is allowed'); end % *** JRI *** downgraded to warning as I _do_ rescale [FIXME: why?]
   otherwise
     % could be a volume conductor model with constrained transformation possibilities
     if ft_headmodeltype(input, 'singleshell') && isfield(input, 'forwpar') && (globalrescale || axesrescale)
