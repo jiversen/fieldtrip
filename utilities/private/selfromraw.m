@@ -50,6 +50,10 @@ if numel(selrpt) ~= numel(data.trial)
   if isfield(data, 'trialinfo'),  data.trialinfo  = data.trialinfo(selrpt,  :); end
   if isfield(data, 'offset'),     data.offset     = data.offset(selrpt);        end
 
+  %*** JRI ***
+  if isfield(data, 'nsi_trialinfo'), data.nsi_trialinfo = data.nsi_trialinfo(selrpt); end
+  %*** JRI ***
+
 end
 
 if numel(selchan) ~= numel(data.label)
