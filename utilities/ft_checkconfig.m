@@ -74,6 +74,9 @@ checkfilenames  = ft_getopt(varargin, 'dataset2files', 'no');
 checkinside     = ft_getopt(varargin, 'inside2logical', 'no');
 checksize       = ft_getopt(varargin, 'checksize', 'no');
 
+% *** JRI *** maddening, assert a sensible default for me, regardless of caller intention
+checksize = 'off';
+
 % these should be cell arrays and not strings
 if ischar(required),     required     = {required};      end
 if ischar(deprecated),   deprecated   = {deprecated};    end
