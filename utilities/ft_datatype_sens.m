@@ -127,6 +127,20 @@ if isequal(current_argin, previous_argin)
   return
 end
 
+% *** JRI *** enable for multimodal data
+if iscell(sens)
+  for iS = 1:length(sens)
+    sens{iS} = ft_datatype_sens(sens{iS});
+  end
+  % remember the current input and output arguments, so that they can be
+  % reused on a subsequent call in case the same input argument is given
+  current_argout = {sens};
+  previous_argin  = current_argin;
+  previous_argout = current_argout;
+  return
+end
+% *** JRI ***
+
 % get the optional input arguments, which should be specified as key-value pairs
 version   = ft_getopt(varargin, 'version', 'latest');
 amplitude = ft_getopt(varargin, 'amplitude'); % should be 'V' 'uV' 'T' 'mT' 'uT' 'nT' 'pT' 'fT'
